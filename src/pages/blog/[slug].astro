@@ -1,0 +1,39 @@
+---
+import { client } from '../../lib/microcms';
+
+export async function getStaticPaths() {
+  const data = await client.get({
+    endpoint: 'blogs',
+  });
+
+  return data.contents
+    .filter((post) => post.slug)
+    .map((post) => ({
+      params: { slug: post.slug },
+      props: { post },
+    }));
+}
+
+const { post } = Astro.props;
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{post.title}</title>
+  </head>
+  <body>
+    <h1>{post.title}</h1>
+
+    {post.eyecatch?.url && (
+      <img
+  src={post.eyecatch.url}
+  alt={post.title}
+  style="width: 100%; max-width: 600px; height: auto;"
+/>
+    )}
+
+    <div set:html={post.content || post.body || ''} />
+  </body>
+</html>
