@@ -1,4 +1,5 @@
 ---
+import '../styles/global.css';
 import { client } from '../lib/microcms';
 
 const data = await client.get({
@@ -11,14 +12,25 @@ const data = await client.get({
     <meta charset="utf-8" />
     <title>ブログ一覧</title>
   </head>
-  <body>
-    <h1>ブログ一覧</h1>
-    <ul>
+  <body class="bg-gray-100 p-8">
+    <h1 class="text-3xl font-bold mb-6">ブログ一覧</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       {data.contents.map((post) => (
-        <li>
-  			<a href={`/blog/${post.slug}`}>{post.title}</a>
-		</li>
+        <a href={`/blog/${post.slug}`} class="block">
+          <div class="bg-white p-6 rounded-3xl shadow-2xl border border-gray-200">
+            {post.eyecatch?.url && (
+              <img
+                src={post.eyecatch.url}
+                alt={post.title}
+                class="w-full h-48 object-cover rounded-2xl"
+              />
+            )}
+
+            <h2 class="text-xl font-semibold mt-4">{post.title}</h2>
+          </div>
+        </a>
       ))}
-    </ul>
+    </div>
   </body>
 </html>
