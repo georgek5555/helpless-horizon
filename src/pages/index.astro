@@ -18,7 +18,7 @@ const posts = Array.isArray(json?.data) ? json.data : [];
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       {posts.map((post) => (
-        <a href={`/blog/${post.slug}`} class="block">
+        <a href={`/${post.slug}`} class="block">
           <div class="bg-white p-6 rounded-3xl shadow-2xl border border-gray-200">
             {post.eyecatch_url && (
               <img
