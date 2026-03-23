@@ -1,39 +1,42 @@
----
-import { client } from '../../lib/microcms';
+---  
+export const prerender = false;
 
-export async function getStaticPaths() {
-  const data = await client.get({
-    endpoint: 'blogs',
-  });
+const { slug } = Astro.params;
 
-  return data.contents
-    .filter((post) => post.slug)
-    .map((post) => ({
-      params: { slug: post.slug },
-      props: { post },
-    }));
-}
-
-const { post } = Astro.props;
+const res = await fetch("http://133.117.77.80:8055/items/posts?fields=*,site.*&filter[status][_eq]=published");
+const json = await res.json();
+const posts = Array.isArray(json?.data) ? json.data : [];
+const normalizedSlug = String(slug ?? '').trim();
+const post = posts.find((item) => String(item?.slug ?? '').trim() === normalizedSlug) ?? null;
 ---
 
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{post.title}</title>
+    <title>{post?.title ?? '記事が見つかりません'}</title>
   </head>
   <body>
-    <h1>{post.title}</h1>
+    {post ? (
+      <>
+        <h1>{post.title}</h1>
 
-    {post.eyecatch?.url && (
-      <img
-  src={post.eyecatch.url}
-  alt={post.title}
-  style="width: 100%; max-width: 600px; height: auto;"
-/>
+        {post.eyecatch_url && (
+          <img
+            src={post.eyecatch_url}
+            alt={post.title}
+            style="width: 100%; max-width: 600px; height: auto;"
+          />
+        )}
+
+        {post.site?.name && <p>{post.site.name}</p>}
+
+        <div>
+          <pre>{post.body}</pre>
+        </div>
+      </>
+    ) : (
+      <p>記事が見つかりません。</p>
     )}
-
-    <div set:html={post.content || post.body || ''} />
   </body>
 </html>

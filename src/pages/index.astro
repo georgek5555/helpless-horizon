@@ -1,10 +1,11 @@
 ---
 import '../styles/global.css';
-import { client } from '../lib/microcms';
 
-const data = await client.get({
-  endpoint: 'blogs',
+const res = await fetch("http://133.117.77.80:8055/items/posts?fields=*,site.*&filter[status][_eq]=published", {
+  cache: "no-store"
 });
+const json = await res.json();
+const posts = Array.isArray(json?.data) ? json.data : [];
 ---
 
 <html lang="ja">
@@ -16,18 +17,19 @@ const data = await client.get({
     <h1 class="text-3xl font-bold mb-6">一覧をご確認ください</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {data.contents.map((post) => (
+      {posts.map((post) => (
         <a href={`/blog/${post.slug}`} class="block">
           <div class="bg-white p-6 rounded-3xl shadow-2xl border border-gray-200">
-            {post.eyecatch?.url && (
+            {post.eyecatch_url && (
               <img
-                src={post.eyecatch.url}
+                src={post.eyecatch_url}
                 alt={post.title}
                 class="w-full h-48 object-cover rounded-2xl"
               />
             )}
 
             <h2 class="text-xl font-semibold mt-4">{post.title}</h2>
+            <p class="text-sm text-gray-500 mt-2">{post.site?.name}</p>
           </div>
         </a>
       ))}
