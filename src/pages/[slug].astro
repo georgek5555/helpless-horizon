@@ -11,7 +11,7 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 
-const res = await fetch(`http://133.117.77.80:8055/items/posts?fields=*,site.*&filter[slug][_eq]=${slug}&filter[status][_eq]=published`);
+const res = await fetch(`http://133.117.77.80:8055/items/posts?fields=*,site.*,eyecatch.filename_disk&filter[slug][_eq]=${slug}&filter[status][_eq]=published`);
 const json = await res.json();
 const post = json?.data?.[0] ?? null;
 
@@ -32,9 +32,9 @@ const fixedBody = post?.body?.replace(
       <>
         <h1>{post.title}</h1>
 
-        {post.eyecatch && (
+        {post.eyecatch?.filename_disk && (
           <img
-            src={`https://img.134.network/${post.eyecatch}`}
+            src={`https://img.134.network/${post.eyecatch.filename_disk}`}
             alt={post.title}
             style="width: 100%; max-width: 600px; height: auto;"
           />

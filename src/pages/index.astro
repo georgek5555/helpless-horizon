@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 
-const res = await fetch("http://133.117.77.80:8055/items/posts?fields=*,site.*&filter[status][_eq]=published", {
+const res = await fetch("http://133.117.77.80:8055/items/posts?fields=*,site.*,eyecatch.filename_disk&filter[status][_eq]=published", {
   cache: "no-store"
 });
 const json = await res.json();
@@ -20,9 +20,9 @@ const posts = Array.isArray(json?.data) ? json.data : [];
       {posts.map((post) => (
         <a href={`/${post.slug}`} class="block">
           <div class="bg-white p-6 rounded-3xl shadow-2xl border border-gray-200">
-            {post.eyecatch && (
+            {post.eyecatch?.filename_disk && (
               <img
-                src={`http://133.117.77.80:8055/assets/${post.eyecatch}`}
+                src={`https://img.134.network/${post.eyecatch.filename_disk}`}
                 alt={post.title}
                 class="w-full h-48 object-cover rounded-2xl"
               />
