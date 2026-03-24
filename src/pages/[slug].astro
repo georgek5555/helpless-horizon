@@ -11,13 +11,14 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 
-const res = await fetch("http://133.117.77.80:8055/items/posts?fields=*,site.*&filter[status][_eq]=published", {
-  cache: "no-store"
-});
+const res = await fetch(`http://133.117.77.80:8055/items/posts?fields=*,site.*&filter[slug][_eq]=${slug}&filter[status][_eq]=published`);
 const json = await res.json();
-const posts = Array.isArray(json?.data) ? json.data : [];
-const normalizedSlug = String(slug ?? '').trim();
-const post = posts.find((item) => String(item?.slug ?? '').trim() === normalizedSlug) ?? null;
+const post = json?.data?.[0] ?? null;
+
+const fixedBody = post?.body?.replace(
+  /http:\/\/133\.117\.77\.80:8055\/assets\//g,
+  'https://img.134.network/'
+) ?? '';
 ---
 
 <html lang="ja">
@@ -31,19 +32,17 @@ const post = posts.find((item) => String(item?.slug ?? '').trim() === normalized
       <>
         <h1>{post.title}</h1>
 
-{post.eyecatch && (
-  <img
-    src={`http://133.117.77.80:8055/assets/${post.eyecatch}`}
-    alt={post.title}
-    style="width: 100%; max-width: 600px; height: auto;"
-  />
-)}
+        {post.eyecatch && (
+          <img
+            src={`https://img.134.network/${post.eyecatch}`}
+            alt={post.title}
+            style="width: 100%; max-width: 600px; height: auto;"
+          />
+        )}
 
         {post.site?.name && <p>{post.site.name}</p>}
 
-        <div>
-          <div set:html={post.body} />
-        </div>
+        <div set:html={fixedBody} />
       </>
     ) : (
       <p>記事が見つかりません。</p>
