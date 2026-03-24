@@ -26,7 +26,7 @@ const ogImage = post?.eyecatch?.filename_disk
   ? `https://img.134.network/${post.eyecatch.filename_disk}`
   : undefined;
 
-const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://example.com');
+const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://www.134.network');
 const canonical = `${siteUrl}/${slug}`;
 
 function formatDate(dateStr: string | undefined) {
@@ -38,7 +38,6 @@ function formatDate(dateStr: string | undefined) {
   });
 }
 
-// JSON-LD structured data
 const jsonLd = post ? {
   '@context': 'https://schema.org',
   '@type': 'BlogPosting',
@@ -62,143 +61,221 @@ const jsonLd = post ? {
   )}
 
   {post ? (
-    <article class="max-w-3xl mx-auto px-6 py-12">
-      <!-- Article header -->
-      <header class="mb-8">
-        {post.site?.name && (
-          <p class="text-sm font-medium text-indigo-600 mb-3">{post.site.name}</p>
-        )}
-        <h1 class="text-3xl md:text-4xl font-bold leading-tight">{post.title}</h1>
-        {post.date_created && (
-          <p class="text-sm text-gray-400 mt-4">{formatDate(post.date_created)}</p>
-        )}
+    <article class="article">
+      <header class="article-header">
+        <div class="article-meta-top">
+          {post.site?.name && <span class="article-site">{post.site.name}</span>}
+          {post.date_created && <span class="article-date">{formatDate(post.date_created)}</span>}
+        </div>
+        <h1 class="article-title">{post.title}</h1>
       </header>
 
-      <!-- Article body -->
-      <div class="prose" set:html={fixedBody} />
+      <div class="article-body prose" set:html={fixedBody} />
 
-      <!-- Back link -->
-      <div class="mt-16 pt-8 border-t border-gray-100">
-        <a href="/" class="text-sm text-indigo-600 hover:underline">← 記事一覧に戻る</a>
+      <div class="article-back">
+        <a href="/">← 記事一覧に戻る</a>
       </div>
     </article>
   ) : (
-    <div class="max-w-3xl mx-auto px-6 py-24 text-center">
-      <p class="text-xl text-gray-400">記事が見つかりません。</p>
-      <a href="/" class="mt-6 inline-block text-indigo-600 hover:underline text-sm">← 記事一覧に戻る</a>
+    <div class="not-found">
+      <p>記事が見つかりません。</p>
+      <a href="/">← 記事一覧に戻る</a>
     </div>
   )}
 </Layout>
 
 <style>
+  .article {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 4rem 2rem 6rem;
+  }
+
+  .article-header {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .article-meta-top {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .article-site {
+    color: #FFCC22;
+    opacity: 0.8;
+  }
+
+  .article-title {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+    color: #ffffff;
+  }
+
+  .article-date {
+    /* inherited from meta-top */
+  }
+
+  /* Article body prose styles */
+  .prose {
+    font-size: 1rem;
+    line-height: 2;
+    color: #ffffff;
+  }
+
   .prose :global(h1),
   .prose :global(h2),
   .prose :global(h3),
   .prose :global(h4) {
     font-weight: 700;
-    margin-top: 2rem;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+    color: #ffffff;
+    margin-top: 2.5rem;
     margin-bottom: 1rem;
-    line-height: 1.4;
   }
-  .prose :global(h1) { font-size: 1.75rem; }
-  .prose :global(h2) { font-size: 1.4rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
-  .prose :global(h3) { font-size: 1.2rem; }
-  .prose :global(h4) { font-size: 1rem; }
+  .prose :global(h2) {
+    font-size: 1.3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .prose :global(h3) { font-size: 1.1rem; }
+  .prose :global(h4) { font-size: 1rem; color: rgba(255,255,255,0.8); }
 
   .prose :global(p) {
-    line-height: 1.8;
-    margin-bottom: 1.25rem;
-    color: #374151;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
   }
 
   .prose :global(img) {
-    border-radius: 0.75rem;
-    margin-top: 1.5rem;
-    margin-bottom: 1.5rem;
     width: 100%;
     height: auto;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    margin: 2rem 0;
+    display: block;
   }
 
   .prose :global(a) {
-    color: #4f46e5;
+    color: #FFCC22;
     text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .prose :global(a:hover) {
-    color: #3730a3;
+    opacity: 0.75;
   }
 
   .prose :global(ul),
   .prose :global(ol) {
     padding-left: 1.5rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
   }
   .prose :global(ul) { list-style-type: disc; }
   .prose :global(ol) { list-style-type: decimal; }
   .prose :global(li) {
     margin-bottom: 0.4rem;
-    color: #374151;
-    line-height: 1.7;
+    color: #ffffff;
   }
 
   .prose :global(blockquote) {
-    border-left: 4px solid #c7d2fe;
-    padding: 0.75rem 1.25rem;
-    margin: 1.5rem 0;
-    background: #f5f5ff;
-    border-radius: 0 0.5rem 0.5rem 0;
-    color: #6b7280;
+    border-left: 3px solid #FFCC22;
+    padding: 0.75rem 1.5rem;
+    margin: 2rem 0;
+    color: rgba(255, 255, 255, 0.6);
     font-style: italic;
   }
 
   .prose :global(code) {
-    background: #f3f4f6;
-    border-radius: 0.25rem;
-    padding: 0.1rem 0.4rem;
-    font-size: 0.875rem;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+    padding: 0.1em 0.4em;
+    font-size: 0.875em;
     font-family: ui-monospace, monospace;
-    color: #be185d;
+    color: #FFCC22;
   }
 
   .prose :global(pre) {
-    background: #1f2937;
-    color: #e5e7eb;
-    border-radius: 0.75rem;
+    background: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
     padding: 1.5rem;
     overflow-x: auto;
-    margin: 1.5rem 0;
+    margin: 2rem 0;
   }
   .prose :global(pre code) {
     background: transparent;
     padding: 0;
-    color: inherit;
+    color: #ffffff;
     font-size: 0.875rem;
   }
 
   .prose :global(hr) {
     border: none;
-    border-top: 1px solid #e5e7eb;
-    margin: 2.5rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 3rem 0;
   }
 
   .prose :global(table) {
     width: 100%;
     border-collapse: collapse;
-    margin: 1.5rem 0;
+    margin: 2rem 0;
     font-size: 0.9rem;
   }
   .prose :global(th) {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0.6rem 1rem;
     text-align: left;
     font-weight: 600;
+    color: #ffffff;
   }
   .prose :global(td) {
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0.6rem 1rem;
+    color: #ffffff;
   }
-  .prose :global(tr:nth-child(even)) {
-    background: #f9fafb;
+
+  .article-back {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .article-back a {
+    font-size: 0.85rem;
+    color: #FFCC22;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .article-back a:hover {
+    opacity: 1;
+  }
+
+  .not-found {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8rem 2rem;
+    text-align: center;
+  }
+  .not-found p {
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 1.5rem;
+  }
+  .not-found a {
+    color: #FFCC22;
+    font-size: 0.85rem;
+    text-decoration: none;
+    opacity: 0.7;
+  }
+  .not-found a:hover {
+    opacity: 1;
   }
 </style>

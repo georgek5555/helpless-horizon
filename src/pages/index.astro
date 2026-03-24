@@ -19,52 +19,170 @@ function formatDate(dateStr: string | undefined) {
 ---
 
 <Layout title="テストブログYES" description="最新の記事をお届けします。">
-  <div class="max-w-4xl mx-auto px-6 py-12">
-    <!-- Page heading -->
-    <div class="mb-10">
-      <h1 class="text-3xl font-bold">記事一覧</h1>
-      <p class="text-gray-500 mt-2 text-sm">{posts.length} 件の記事</p>
+  <div class="container">
+    <div class="heading">
+      <h1>記事一覧</h1>
+      <span class="count">{posts.length} articles</span>
     </div>
 
-    <!-- Post grid -->
     {posts.length > 0 ? (
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid">
         {posts.map((post) => (
-          <a href={`/${post.slug}`} class="group block">
-            <article class="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 h-full flex flex-col">
-              <!-- Thumbnail -->
+          <a href={`/${post.slug}`} class="card">
+            <div class="card-image">
               {post.eyecatch?.filename_disk ? (
-                <div class="overflow-hidden aspect-video">
-                  <img
-                    src={`https://img.134.network/${post.eyecatch.filename_disk}`}
-                    alt={post.title}
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
+                <img
+                  src={`https://img.134.network/${post.eyecatch.filename_disk}`}
+                  alt={post.title}
+                  loading="lazy"
+                />
               ) : (
-                <div class="aspect-video bg-gradient-to-br from-indigo-50 to-purple-100 flex items-center justify-center">
-                  <span class="text-5xl opacity-30">✍️</span>
+                <div class="card-image-placeholder">
+                  <span>No Image</span>
                 </div>
               )}
-
-              <!-- Card body -->
-              <div class="p-6 flex flex-col flex-1">
-                <h2 class="text-base font-semibold leading-snug group-hover:text-indigo-600 transition-colors duration-150 flex-1">
-                  {post.title}
-                </h2>
-                <div class="mt-4 flex items-center gap-3 text-xs text-gray-400">
-                  {post.site?.name && <span>{post.site.name}</span>}
-                  {post.site?.name && post.date_created && <span>·</span>}
-                  {post.date_created && <span>{formatDate(post.date_created)}</span>}
-                </div>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">{post.title}</h2>
+              <div class="card-meta">
+                {post.site?.name && <span>{post.site.name}</span>}
+                {post.date_created && <span>{formatDate(post.date_created)}</span>}
               </div>
-            </article>
+            </div>
           </a>
         ))}
       </div>
     ) : (
-      <p class="text-gray-400 text-center py-24">記事がまだありません。</p>
+      <p class="empty">記事がまだありません。</p>
     )}
   </div>
 </Layout>
+
+<style>
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 4rem 2rem 6rem;
+  }
+
+  .heading {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .heading h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #ffffff;
+  }
+
+  .count {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.1em;
+    font-weight: 400;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  @media (min-width: 640px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .card {
+    display: block;
+    text-decoration: none;
+    background: #111111;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+
+  .card:hover {
+    background: #1a1a1a;
+  }
+
+  .card-image {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #1a1a1a;
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+    filter: brightness(0.85);
+  }
+
+  .card:hover .card-image img {
+    transform: scale(1.04);
+    filter: brightness(1);
+  }
+
+  .card-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+  }
+
+  .card-image-placeholder span {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.15);
+  }
+
+  .card-body {
+    padding: 1.25rem 1.25rem 1.5rem;
+  }
+
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.6;
+    color: #ffffff;
+    transition: color 0.15s;
+  }
+
+  .card:hover .card-title {
+    color: #FFCC22;
+  }
+
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.05em;
+  }
+
+  .empty {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+    padding: 6rem 0;
+    font-size: 0.9rem;
+  }
+</style>

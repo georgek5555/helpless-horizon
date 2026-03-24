@@ -20,7 +20,7 @@ const {
 } = Astro.props;
 
 const siteName = 'テストブログYES';
-const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://example.com');
+const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://www.134.network');
 const fullTitle = title === siteName ? siteName : `${title} | ${siteName}`;
 const canonical = canonicalUrl ?? `${siteUrl}${Astro.url.pathname}`;
 const metaDescription = description ?? `${siteName} の記事をお読みいただけます。`;
@@ -59,27 +59,88 @@ const metaDescription = description ?? `${siteName} の記事をお読みいた�
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="generator" content={Astro.generator} />
+
+    <!-- Noto Serif JP -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+  <body>
     <!-- Header -->
-    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-      <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/" class="text-xl font-bold tracking-tight hover:text-indigo-600 transition-colors duration-150">
-          {siteName}
-        </a>
+    <header>
+      <div class="inner">
+        <a href="/" class="site-name">{siteName}</a>
       </div>
     </header>
 
     <!-- Main content -->
-    <main class="flex-1">
+    <main>
       <slot />
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-100 mt-16">
-      <div class="max-w-4xl mx-auto px-6 py-8 text-center text-sm text-gray-400">
-        <p>© {new Date().getFullYear()} {siteName}</p>
-      </div>
+    <footer>
+      <p>© {new Date().getFullYear()} {siteName}</p>
     </footer>
   </body>
 </html>
+
+<style>
+  :global(*) {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :global(html) {
+    font-family: 'Noto Serif JP', 'Times New Roman', serif;
+    background: #0a0a0a;
+    color: #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :global(body) {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #0a0a0a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  header .inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.25rem 2rem;
+  }
+
+  .site-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #FFCC22;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .site-name:hover {
+    opacity: 0.75;
+  }
+
+  main {
+    flex: 1;
+  }
+
+  footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.05em;
+  }
+</style>
