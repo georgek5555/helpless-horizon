@@ -108,44 +108,82 @@ const jsonLd = post ? {
 
   /* Header */
   .article-header {
-    padding-top: 3.5rem;
+    padding-top: 5.5rem;
     margin-bottom: 4rem;
     position: relative;
   }
 
   .article-header-inner {
-    padding-bottom: 2.5rem;
+    padding-bottom: 3rem;
   }
 
   .article-date {
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    color: rgba(255, 255, 255, 0.3);
-    margin-bottom: 1.25rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #FFCC22;
+    opacity: 0.7;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .article-date::before {
+    content: '';
+    display: inline-block;
+    width: 1.5rem;
+    height: 1px;
+    background: #FFCC22;
+    opacity: 0.5;
+    transform: skewX(-20deg);
   }
 
   .article-title {
-    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-size: clamp(2rem, 5.5vw, 3.5rem);
     font-weight: 700;
-    line-height: 1.4;
+    line-height: 1.35;
     letter-spacing: 0.02em;
     color: #ffffff;
+    position: relative;
+    padding-left: 1.25rem;
+  }
+
+  .article-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.15em;
+    bottom: 0.15em;
+    width: 3px;
+    background: #FFCC22;
+    transform: skewY(-6deg);
   }
 
   /* Diagonal decorative line under title */
   .article-header-line {
     position: relative;
     height: 1px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     transform-origin: left center;
+  }
+
+  .article-header-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, rgba(255,204,34,0.25), transparent 60%);
   }
 
   .article-header-line::after {
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    width: 3rem;
+    top: -1px;
+    width: 4rem;
     height: 2px;
     background: #FFCC22;
     transform: skewX(-20deg);
@@ -189,7 +227,22 @@ const jsonLd = post ? {
     background: #FFCC22;
     transform: skewY(-8deg);
   }
-  .prose :global(h3) { font-size: 1.1rem; }
+  .prose :global(h3) {
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .prose :global(h3)::before {
+    content: '';
+    display: inline-block;
+    width: 1.2rem;
+    height: 1px;
+    background: #FFCC22;
+    flex-shrink: 0;
+    transform: skewX(-20deg);
+    opacity: 0.8;
+  }
   .prose :global(h4) { font-size: 1rem; color: rgba(255,255,255,0.7); }
 
   .prose :global(p) {
@@ -202,7 +255,6 @@ const jsonLd = post ? {
     height: auto;
     margin: 2.5rem 0;
     display: block;
-    clip-path: polygon(0 0, 100% 0, 100% 94%, 97% 100%, 0 100%);
   }
 
   .prose :global(a) {
@@ -214,14 +266,43 @@ const jsonLd = post ? {
 
   .prose :global(ul),
   .prose :global(ol) {
-    padding-left: 1.5rem;
+    padding-left: 0;
     margin-bottom: 1.75rem;
+    list-style: none;
   }
-  .prose :global(ul) { list-style-type: disc; }
-  .prose :global(ol) { list-style-type: decimal; }
-  .prose :global(li) {
-    margin-bottom: 0.4rem;
+  .prose :global(ul li) {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.6rem;
     color: #ffffff;
+  }
+  .prose :global(ul li)::before {
+    content: '/';
+    position: absolute;
+    left: 0;
+    color: #FFCC22;
+    font-weight: 700;
+    font-style: italic;
+  }
+  .prose :global(ol) {
+    counter-reset: ol-counter;
+  }
+  .prose :global(ol li) {
+    position: relative;
+    padding-left: 2.25rem;
+    margin-bottom: 0.6rem;
+    color: #ffffff;
+    counter-increment: ol-counter;
+  }
+  .prose :global(ol li)::before {
+    content: counter(ol-counter, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    color: #FFCC22;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    top: 0.3em;
   }
 
   .prose :global(blockquote) {
