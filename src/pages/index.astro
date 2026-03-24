@@ -17,14 +17,16 @@ const posts = Array.isArray(json?.data) ? json.data : [];
     <h1 class="text-3xl font-bold mb-6">一覧をご確認ください</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {post.eyecatch && (
-          <img
-          src={`http://133.117.77.80:8055/assets/${post.eyecatch}`}
-          alt={post.title}
-          class="w-full h-48 object-cover rounded-2xl"
-          />
-          )}
-
+      {posts.map((post) => (
+        <a href={`/${post.slug}`} class="block">
+          <div class="bg-white p-6 rounded-3xl shadow-2xl border border-gray-200">
+            {post.eyecatch && (
+              <img
+                src={`http://133.117.77.80:8055/assets/${post.eyecatch}`}
+                alt={post.title}
+                class="w-full h-48 object-cover rounded-2xl"
+              />
+            )}
             <h2 class="text-xl font-semibold mt-4">{post.title}</h2>
             <p class="text-sm text-gray-500 mt-2">{post.site?.name}</p>
           </div>
