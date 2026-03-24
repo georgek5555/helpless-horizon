@@ -31,13 +31,13 @@ const post = posts.find((item) => String(item?.slug ?? '').trim() === normalized
       <>
         <h1>{post.title}</h1>
 
-        {post.eyecatch_url && (
-          <img
-            src={post.eyecatch_url}
-            alt={post.title}
-            style="width: 100%; max-width: 600px; height: auto;"
-          />
-        )}
+{post.eyecatch && (
+  <img
+    src={`http://133.117.77.80:8055/assets/${post.eyecatch}`}
+    alt={post.title}
+    style="width: 100%; max-width: 600px; height: auto;"
+  />
+)}
 
         {post.site?.name && <p>{post.site.name}</p>}
 
