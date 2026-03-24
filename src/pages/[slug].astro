@@ -17,10 +17,21 @@ const res = await fetch(`http://133.117.77.80:8055/items/posts?fields=*,site.*,e
 const json = await res.json();
 const post = json?.data?.[0] ?? null;
 
-const fixedBody = post?.body?.replace(
-  /http:\/\/133\.117\.77\.80:8055\/assets\//g,
-  'https://img.134.network/'
-) ?? '';
+function embedYouTube(html: string): string {
+  // YouTubeのURLを<p>タグ内で検出してiframeに変換
+  return html.replace(
+    /<p>\s*(?:<a[^>]*>)?\s*(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_\-]+)[^\s<]*?)\s*(?:<\/a>)?\s*<\/p>/g,
+    (_match: string, _url: string, id: string) =>
+      `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${id}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+  );
+}
+
+const fixedBody = embedYouTube(
+  post?.body?.replace(
+    /http:\/\/133\.117\.77\.80:8055\/assets\//g,
+    'https://img.134.network/'
+  ) ?? ''
+);
 
 const ogImage = post?.eyecatch?.filename_disk
   ? `https://img.134.network/${post.eyecatch.filename_disk}`
@@ -255,6 +266,22 @@ const jsonLd = post ? {
     height: auto;
     margin: 2.5rem 0;
     display: block;
+  }
+
+  .prose :global(.video-wrap) {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    margin: 2.5rem 0;
+    background: #111;
+  }
+  .prose :global(.video-wrap iframe) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
   }
 
   .prose :global(a) {
