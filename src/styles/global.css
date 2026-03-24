@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+:root {
+  --font-serif: 'Cormorant Garamond', 'Shippori Mincho', '游明朝', 'Yu Mincho', YuMincho, serif;
+}
+
+html {
+  font-family: var(--font-serif);
+}
+
+body {
+  font-family: var(--font-serif);
+}
