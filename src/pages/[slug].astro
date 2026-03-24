@@ -42,7 +42,7 @@ const post = posts.find((item) => String(item?.slug ?? '').trim() === normalized
         {post.site?.name && <p>{post.site.name}</p>}
 
         <div>
-          <pre>{post.body}</pre>
+          <div set:html={post.body} />
         </div>
       </>
     ) : (
