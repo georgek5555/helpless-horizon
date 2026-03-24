@@ -204,7 +204,7 @@ const jsonLd = post ? {
 
   .prose {
     font-size: 1rem;
-    line-height: 2.1;
+    line-height: 1.95;
     color: #ffffff;
   }
 
@@ -294,36 +294,40 @@ const jsonLd = post ? {
   }
   .prose :global(ul li) {
     position: relative;
-    padding-left: 1.1rem;
-    margin-bottom: 0.6rem;
+    padding-left: 1.2rem;
+    margin-bottom: 0.4rem;
     color: #ffffff;
+    line-height: 1.75;
   }
   .prose :global(ul li)::before {
     content: '—';
     position: absolute;
     left: 0;
     color: rgba(255, 204, 34, 0.6);
-    font-size: 0.75em;
-    top: 0.2em;
+    font-size: 0.8em;
+    top: 0.18em;
   }
   .prose :global(ol) {
     counter-reset: ol-counter;
   }
   .prose :global(ol li) {
     position: relative;
-    padding-left: 1.75rem;
-    margin-bottom: 0.6rem;
+    padding-left: 1.6rem;
+    margin-bottom: 0.4rem;
     color: #ffffff;
     counter-increment: ol-counter;
+    line-height: 1.75;
   }
   .prose :global(ol li)::before {
     content: counter(ol-counter);
     position: absolute;
     left: 0;
     color: #FFCC22;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    top: 0.15em;
+    font-variant-numeric: lining-nums tabular-nums;
+    font-family: 'Cormorant Garamond', serif;
+    top: 0.1em;
   }
 
   .prose :global(blockquote) {
