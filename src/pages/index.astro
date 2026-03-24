@@ -19,52 +19,195 @@ function formatDate(dateStr: string | undefined) {
 ---
 
 <Layout title="テストブログYES" description="最新の記事をお届けします。">
-  <div class="max-w-4xl mx-auto px-6 py-12">
-    <!-- Page heading -->
-    <div class="mb-10">
-      <h1 class="text-3xl font-bold">記事一覧</h1>
-      <p class="text-gray-500 mt-2 text-sm">{posts.length} 件の記事</p>
-    </div>
-
-    <!-- Post grid -->
-    {posts.length > 0 ? (
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {posts.map((post) => (
-          <a href={`/${post.slug}`} class="group block">
-            <article class="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 h-full flex flex-col">
-              <!-- Thumbnail -->
+  <div class="page">
+    <div class="posts">
+      {posts.map((post, i) => (
+        <a href={`/${post.slug}`} class="post" data-index={i}>
+          <div class="post-inner">
+            <!-- Image -->
+            <div class="post-image-wrap">
               {post.eyecatch?.filename_disk ? (
-                <div class="overflow-hidden aspect-video">
-                  <img
-                    src={`https://img.134.network/${post.eyecatch.filename_disk}`}
-                    alt={post.title}
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
+                <img
+                  src={`https://img.134.network/${post.eyecatch.filename_disk}`}
+                  alt={post.title}
+                  loading="lazy"
+                  class="post-img"
+                />
               ) : (
-                <div class="aspect-video bg-gradient-to-br from-indigo-50 to-purple-100 flex items-center justify-center">
-                  <span class="text-5xl opacity-30">✍️</span>
-                </div>
+                <div class="post-img-placeholder">No Image</div>
               )}
+              <div class="post-img-overlay"></div>
+            </div>
 
-              <!-- Card body -->
-              <div class="p-6 flex flex-col flex-1">
-                <h2 class="text-base font-semibold leading-snug group-hover:text-indigo-600 transition-colors duration-150 flex-1">
-                  {post.title}
-                </h2>
-                <div class="mt-4 flex items-center gap-3 text-xs text-gray-400">
-                  {post.site?.name && <span>{post.site.name}</span>}
-                  {post.site?.name && post.date_created && <span>·</span>}
-                  {post.date_created && <span>{formatDate(post.date_created)}</span>}
-                </div>
+            <!-- Content -->
+            <div class="post-content">
+              <h2 class="post-title">{post.title}</h2>
+              <div class="post-meta">
+                {post.date_created && <span>{formatDate(post.date_created)}</span>}
               </div>
-            </article>
-          </a>
-        ))}
-      </div>
-    ) : (
-      <p class="text-gray-400 text-center py-24">記事がまだありません。</p>
-    )}
+              <span class="post-arrow">→</span>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
   </div>
 </Layout>
+
+<style>
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 5.5rem 2rem 8rem;
+  }
+
+  /* Posts list */
+  .posts {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .post {
+    display: block;
+    text-decoration: none;
+    opacity: 0;
+    transform: translateY(32px);
+    animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .post[data-index="0"] { animation-delay: 0.05s; }
+  .post[data-index="1"] { animation-delay: 0.15s; }
+  .post[data-index="2"] { animation-delay: 0.25s; }
+  .post[data-index="3"] { animation-delay: 0.35s; }
+  .post[data-index="4"] { animation-delay: 0.45s; }
+  .post[data-index="5"] { animation-delay: 0.55s; }
+
+  @keyframes fadeUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .post-inner {
+    position: relative;
+    padding: 3rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .post:last-child .post-inner {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .post:hover .post-inner {
+    transform: translateX(6px);
+  }
+
+  /* Image */
+  .post-image-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 1.75rem;
+  }
+
+
+  .post-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.75);
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+                filter 0.4s ease;
+  }
+
+  .post:hover .post-img {
+    transform: scale(1.03);
+    filter: brightness(0.9);
+  }
+
+  .post-img-overlay {
+    position: absolute;
+    inset: -1px;
+    background: #0a0a0a;
+    clip-path: polygon(100% 100%, 100% 100%, 100% 100%);
+    transition: clip-path 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: clip-path;
+    pointer-events: none;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .post:hover .post-img-overlay {
+    clip-path: polygon(-1% 101%, 101% 45%, 101% 101%);
+  }
+
+  .post-img-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Content */
+  .post-content {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: start;
+    gap: 0 1.5rem;
+  }
+
+  .post-title {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+    font-weight: 700;
+    line-height: 1.5;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+  }
+
+  .post:hover .post-title {
+    color: #FFCC22;
+  }
+
+  .post-meta {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.08em;
+  }
+
+  .post-arrow {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    font-size: 1.1rem;
+    color: #FFCC22;
+    opacity: 0;
+    align-self: center;
+    transform: translateX(-8px);
+    transition: opacity 0.25s, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .post:hover .post-arrow {
+    opacity: 0.8;
+    transform: translateX(0);
+  }
+</style>
