@@ -238,17 +238,16 @@ const jsonLd = post ? {
     font-size: 1.1rem;
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.55rem;
   }
   .prose :global(h3)::before {
-    content: '';
-    display: inline-block;
-    width: 1.2rem;
-    height: 1px;
-    background: #FFCC22;
+    content: '/';
+    color: #FFCC22;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 1.15em;
     flex-shrink: 0;
-    transform: skewX(-20deg);
-    opacity: 0.8;
+    line-height: 1;
   }
   .prose :global(h4) { font-size: 1rem; color: rgba(255,255,255,0.7); }
 
@@ -295,37 +294,36 @@ const jsonLd = post ? {
   }
   .prose :global(ul li) {
     position: relative;
-    padding-left: 1.5rem;
+    padding-left: 1.1rem;
     margin-bottom: 0.6rem;
     color: #ffffff;
   }
   .prose :global(ul li)::before {
-    content: '/';
+    content: '—';
     position: absolute;
     left: 0;
-    color: #FFCC22;
-    font-weight: 700;
-    font-style: italic;
+    color: rgba(255, 204, 34, 0.6);
+    font-size: 0.75em;
+    top: 0.2em;
   }
   .prose :global(ol) {
     counter-reset: ol-counter;
   }
   .prose :global(ol li) {
     position: relative;
-    padding-left: 2.25rem;
+    padding-left: 1.75rem;
     margin-bottom: 0.6rem;
     color: #ffffff;
     counter-increment: ol-counter;
   }
   .prose :global(ol li)::before {
-    content: counter(ol-counter, decimal-leading-zero);
+    content: counter(ol-counter);
     position: absolute;
     left: 0;
     color: #FFCC22;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    top: 0.3em;
+    top: 0.15em;
   }
 
   .prose :global(blockquote) {
