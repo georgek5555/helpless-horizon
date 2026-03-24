@@ -2,16 +2,20 @@
 import Layout from '../layouts/Layout.astro';
 
 export async function getStaticPaths() {
-  const res = await fetch("http://133.117.77.80:8055/items/posts?fields=slug&filter[status][_eq]=published");
+  const res = await fetch("http://133.117.77.80:8055/items/posts?fields=slug,title&filter[status][_eq]=published&sort=-date_created");
   const json = await res.json();
   const posts = Array.isArray(json?.data) ? json.data : [];
 
-  return posts.map((post) => ({
+  return posts.map((post, i) => ({
     params: { slug: post.slug },
+    props: {
+      prevPost: posts[i - 1] ? { slug: posts[i - 1].slug, title: posts[i - 1].title } : null,
+      nextPost: posts[i + 1] ? { slug: posts[i + 1].slug, title: posts[i + 1].title } : null,
+    },
   }));
 }
 
-const { slug } = Astro.params;
+const { slug, prevPost, nextPost } = { ...Astro.params, ...Astro.props };
 
 const res = await fetch(`http://133.117.77.80:8055/items/posts?fields=*,site.*,eyecatch.filename_disk&filter[slug][_eq]=${slug}&filter[status][_eq]=published`);
 const json = await res.json();
@@ -90,10 +94,32 @@ const jsonLd = post ? {
         <div class="prose" set:html={fixedBody} />
       </div>
 
-      <!-- Back -->
-      <div class="article-back">
-        <a href="/">← Articles</a>
-      </div>
+      <!-- Navigation -->
+      <nav class="post-nav">
+        {prevPost ? (
+          <a href={`/${prevPost.slug}`} class="post-nav-item post-nav-prev">
+            <span class="post-nav-label">
+              <span class="post-nav-arrow">←</span>
+              Prev
+            </span>
+            <span class="post-nav-title">{prevPost.title}</span>
+          </a>
+        ) : (
+          <div class="post-nav-empty" />
+        )}
+        <div class="post-nav-divider" />
+        {nextPost ? (
+          <a href={`/${nextPost.slug}`} class="post-nav-item post-nav-next">
+            <span class="post-nav-label">
+              Next
+              <span class="post-nav-arrow">→</span>
+            </span>
+            <span class="post-nav-title">{nextPost.title}</span>
+          </a>
+        ) : (
+          <div class="post-nav-empty" />
+        )}
+      </nav>
 
     </article>
   ) : (
@@ -389,23 +415,134 @@ const jsonLd = post ? {
     padding: 0.6rem 1rem;
   }
 
-  /* Back link */
-  .article-back {
-    margin-top: 5rem;
-    padding-top: 2rem;
+  /* Post Navigation */
+  .post-nav {
+    margin-top: 6rem;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    position: relative;
   }
 
-  .article-back a {
-    font-size: 0.75rem;
-    letter-spacing: 0.12em;
-    color: rgba(255, 255, 255, 0.3);
-    text-decoration: none;
-    text-transform: uppercase;
-    transition: color 0.2s;
+  .post-nav::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    width: 3rem;
+    height: 2px;
+    background: #FFCC22;
+    transform: skewX(-20deg);
+    transform-origin: left center;
   }
-  .article-back a:hover {
+
+  .post-nav-divider {
+    width: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 3rem 0;
+    position: relative;
+  }
+
+  .post-nav-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -1px;
+    width: 3px;
+    height: 1.5rem;
+    background: #FFCC22;
+    transform: translateY(-50%) skewY(-15deg);
+    opacity: 0.4;
+  }
+
+  .post-nav-empty {
+    display: block;
+  }
+
+  .post-nav-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 3rem 0;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .post-nav-prev {
+    padding-right: 2.5rem;
+  }
+
+  .post-nav-next {
+    padding-left: 2.5rem;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .post-nav-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
     color: #FFCC22;
+    opacity: 0.55;
+    transition: opacity 0.25s;
+  }
+
+  .post-nav-next .post-nav-label {
+    justify-content: flex-end;
+  }
+
+  .post-nav-arrow {
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .post-nav-prev:hover .post-nav-arrow {
+    transform: translateX(-6px);
+  }
+
+  .post-nav-next:hover .post-nav-arrow {
+    transform: translateX(6px);
+  }
+
+  .post-nav-item:hover .post-nav-label {
+    opacity: 1;
+  }
+
+  .post-nav-title {
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    font-weight: 500;
+    line-height: 1.55;
+    color: #ffffff;
+    transition: color 0.25s;
+    position: relative;
+    display: inline-block;
+  }
+
+  .post-nav-title::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: #FFCC22;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .post-nav-next .post-nav-title::after {
+    left: auto;
+    right: 0;
+  }
+
+  .post-nav-item:hover .post-nav-title::after {
+    width: 100%;
+  }
+
+  .post-nav-item:hover .post-nav-title {
+    color: rgba(255, 255, 255, 0.75);
   }
 
   /* Not found */
