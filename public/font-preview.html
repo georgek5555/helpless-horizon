@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>フォントプレビュー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Shippori+Mincho:wght@400;500;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=BIZ+UDPMincho:wght@400;700&family=Lora:ital,wght@0,400;0,500;1,400&family=Zen+Old+Mincho:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; color: #fff; }
+
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(10,10,10,0.95);
+  display: flex;
+  gap: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.nav a {
+  padding: 1rem 1.5rem;
+  color: rgba(255,255,255,0.4);
+  text-decoration: none;
+  font-family: sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.nav a:hover, .nav a.active { color: #FFCC22; }
+
+.section {
+  display: none;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 5rem 2rem 6rem;
+}
+.section.active { display: block; }
+
+.label {
+  font-family: sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  color: #FFCC22;
+  opacity: 0.6;
+  margin-bottom: 3rem;
+  text-transform: uppercase;
+}
+
+.date {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #FFCC22;
+  opacity: 0.7;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.date::before {
+  content: '';
+  display: inline-block;
+  width: 1.5rem;
+  height: 1px;
+  background: #FFCC22;
+  opacity: 0.5;
+  transform: skewX(-20deg);
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.35;
+  color: #fff;
+  margin-bottom: 2rem;
+  position: relative;
+  padding-left: 1.25rem;
+}
+h1::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0.15em; bottom: 0.15em;
+  width: 3px;
+  background: #FFCC22;
+  transform: skewY(-6deg);
+}
+
+h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 2.5rem 0 1rem;
+  position: relative;
+  padding-left: 1rem;
+}
+h2::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0.2em; bottom: 0.2em;
+  width: 2px;
+  background: #FFCC22;
+  transform: skewY(-8deg);
+}
+
+h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 2rem 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+h3::before {
+  content: '/';
+  color: #FFCC22;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+p {
+  line-height: 1.95;
+  margin-bottom: 1.5rem;
+  color: #fff;
+}
+
+ul { list-style: none; margin-bottom: 1.5rem; }
+ul li {
+  position: relative;
+  padding-left: 1.2rem;
+  margin-bottom: 0.4rem;
+  line-height: 1.75;
+}
+ul li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: rgba(255,204,34,0.6);
+  font-size: 0.8em;
+  top: 0.18em;
+}
+
+ol { list-style: none; counter-reset: c; margin-bottom: 1.5rem; }
+ol li {
+  position: relative;
+  padding-left: 1.6rem;
+  margin-bottom: 0.4rem;
+  counter-increment: c;
+  line-height: 1.75;
+}
+ol li::before {
+  content: counter(c);
+  position: absolute;
+  left: 0;
+  color: #FFCC22;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  top: 0.1em;
+}
+
+/* A: Noto Serif JP + Playfair Display */
+.font-a { font-family: 'Noto Serif JP', serif; }
+.font-a .latin { font-family: 'Playfair Display', serif; }
+.font-a h1, .font-a h2, .font-a h3 { font-family: 'Playfair Display', 'Noto Serif JP', serif; }
+.font-a ol li::before { font-family: 'Playfair Display', serif; }
+
+/* B: Shippori Mincho + EB Garamond */
+.font-b { font-family: 'Shippori Mincho', serif; }
+.font-b h1, .font-b h2, .font-b h3 { font-family: 'EB Garamond', 'Shippori Mincho', serif; }
+.font-b ol li::before { font-family: 'EB Garamond', serif; font-variant-numeric: lining-nums; }
+
+/* C: BIZ UDPMincho + Lora */
+.font-c { font-family: 'BIZ UDPMincho', serif; }
+.font-c h1, .font-c h2, .font-c h3 { font-family: 'Lora', 'BIZ UDPMincho', serif; }
+.font-c ol li::before { font-family: 'Lora', serif; }
+
+/* D: Zen Old Mincho + Cormorant Garamond */
+.font-d { font-family: 'Zen Old Mincho', serif; }
+.font-d h1, .font-d h2, .font-d h3 { font-family: 'Cormorant Garamond', 'Zen Old Mincho', serif; }
+.font-d ol li::before { font-family: 'Cormorant Garamond', serif; font-variant-numeric: lining-nums tabular-nums; }
+
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="#" class="active" onclick="show('a',this)">A: Noto Serif JP<br>+ Playfair Display</a>
+  <a href="#" onclick="show('b',this)">B: Shippori Mincho<br>+ EB Garamond</a>
+  <a href="#" onclick="show('c',this)">C: BIZ UDPMincho<br>+ Lora</a>
+  <a href="#" onclick="show('d',this)">D: Zen Old Mincho<br>+ Cormorant Garamond</a>
+</nav>
+
+<!-- A -->
+<div id="sec-a" class="section active font-a">
+  <p class="label">A — Noto Serif JP + Playfair Display</p>
+  <p class="date">2026年3月24日</p>
+  <h1>洗練されたダークエディトリアルの世界へ</h1>
+  <p>これは本文テキストのサンプルです。日本語と English が混在する場合、フォントの相性が重要になります。1234567890 という数字も自然に馴染む必要があります。</p>
+  <h2>これはH2見出しです</h2>
+  <p>明朝体は縦書き文化に根ざした書体で、横組みでも品格ある印象を与えます。読者に落ち着いた読書体験を提供できます。</p>
+  <h3>H3の見出しはこう</h3>
+  <ul>
+    <li>箇条書きのサンプルその一</li>
+    <li>こういう感じで並びます</li>
+    <li>三つ目の項目になります</li>
+  </ul>
+  <ol>
+    <li>数字リストの一番目</li>
+    <li>二番目の項目です</li>
+    <li>三番目はこうなります</li>
+  </ol>
+</div>
+
+<!-- B -->
+<div id="sec-b" class="section font-b">
+  <p class="label">B — Shippori Mincho + EB Garamond</p>
+  <p class="date">2026年3月24日</p>
+  <h1>洗練されたダークエディトリアルの世界へ</h1>
+  <p>これは本文テキストのサンプルです。日本語と English が混在する場合、フォントの相性が重要になります。1234567890 という数字も自然に馴染む必要があります。</p>
+  <h2>これはH2見出しです</h2>
+  <p>明朝体は縦書き文化に根ざした書体で、横組みでも品格ある印象を与えます。読者に落ち着いた読書体験を提供できます。</p>
+  <h3>H3の見出しはこう</h3>
+  <ul>
+    <li>箇条書きのサンプルその一</li>
+    <li>こういう感じで並びます</li>
+    <li>三つ目の項目になります</li>
+  </ul>
+  <ol>
+    <li>数字リストの一番目</li>
+    <li>二番目の項目です</li>
+    <li>三番目はこうなります</li>
+  </ol>
+</div>
+
+<!-- C -->
+<div id="sec-c" class="section font-c">
+  <p class="label">C — BIZ UDPMincho + Lora</p>
+  <p class="date">2026年3月24日</p>
+  <h1>洗練されたダークエディトリアルの世界へ</h1>
+  <p>これは本文テキストのサンプルです。日本語と English が混在する場合、フォントの相性が重要になります。1234567890 という数字も自然に馴染む必要があります。</p>
+  <h2>これはH2見出しです</h2>
+  <p>明朝体は縦書き文化に根ざした書体で、横組みでも品格ある印象を与えます。読者に落ち着いた読書体験を提供できます。</p>
+  <h3>H3の見出しはこう</h3>
+  <ul>
+    <li>箇条書きのサンプルその一</li>
+    <li>こういう感じで並びます</li>
+    <li>三つ目の項目になります</li>
+  </ul>
+  <ol>
+    <li>数字リストの一番目</li>
+    <li>二番目の項目です</li>
+    <li>三番目はこうなります</li>
+  </ol>
+</div>
+
+<!-- D -->
+<div id="sec-d" class="section font-d">
+  <p class="label">D — Zen Old Mincho + Cormorant Garamond</p>
+  <p class="date">2026年3月24日</p>
+  <h1>洗練されたダークエディトリアルの世界へ</h1>
+  <p>これは本文テキストのサンプルです。日本語と English が混在する場合、フォントの相性が重要になります。1234567890 という数字も自然に馴染む必要があります。</p>
+  <h2>これはH2見出しです</h2>
+  <p>明朝体は縦書き文化に根ざした書体で、横組みでも品格ある印象を与えます。読者に落ち着いた読書体験を提供できます。</p>
+  <h3>H3の見出しはこう</h3>
+  <ul>
+    <li>箇条書きのサンプルその一</li>
+    <li>こういう感じで並びます</li>
+    <li>三つ目の項目になります</li>
+  </ul>
+  <ol>
+    <li>数字リストの一番目</li>
+    <li>二番目の項目です</li>
+    <li>三番目はこうなります</li>
+  </ol>
+</div>
+
+<script>
+function show(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  el.classList.add('active');
+  return false;
+}
+</script>
+</body>
+</html>
