@@ -1,37 +1,70 @@
 ---
-import '../styles/global.css';
+import Layout from '../layouts/Layout.astro';
 
-const res = await fetch("http://133.117.77.80:8055/items/posts?fields=*,site.*,eyecatch.filename_disk&filter[status][_eq]=published", {
-  cache: "no-store"
-});
+const res = await fetch(
+  "http://133.117.77.80:8055/items/posts?fields=*,site.*,eyecatch.filename_disk&filter[status][_eq]=published&sort=-date_created",
+  { cache: "no-store" }
+);
 const json = await res.json();
 const posts = Array.isArray(json?.data) ? json.data : [];
+
+function formatDate(dateStr: string | undefined) {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 ---
 
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <title>テストブログYES</title>
-  </head>
-  <body class="bg-gray-100 p-8">
-    <h1 class="text-3xl font-bold mb-6">一覧をご確認ください</h1>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {posts.map((post) => (
-        <a href={`/${post.slug}`} class="block">
-          <div class="bg-white p-6 rounded-3xl shadow-2xl border border-gray-200">
-            {post.eyecatch?.filename_disk && (
-              <img
-                src={`https://img.134.network/${post.eyecatch.filename_disk}`}
-                alt={post.title}
-                class="w-full h-48 object-cover rounded-2xl"
-              />
-            )}
-            <h2 class="text-xl font-semibold mt-4">{post.title}</h2>
-            <p class="text-sm text-gray-500 mt-2">{post.site?.name}</p>
-          </div>
-        </a>
-      ))}
+<Layout title="テストブログYES" description="最新の記事をお届けします。">
+  <div class="max-w-4xl mx-auto px-6 py-12">
+    <!-- Page heading -->
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold">記事一覧</h1>
+      <p class="text-gray-500 mt-2 text-sm">{posts.length} 件の記事</p>
     </div>
-  </body>
-</html>
+
+    <!-- Post grid -->
+    {posts.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {posts.map((post) => (
+          <a href={`/${post.slug}`} class="group block">
+            <article class="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 h-full flex flex-col">
+              <!-- Thumbnail -->
+              {post.eyecatch?.filename_disk ? (
+                <div class="overflow-hidden aspect-video">
+                  <img
+                    src={`https://img.134.network/${post.eyecatch.filename_disk}`}
+                    alt={post.title}
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </div>
+              ) : (
+                <div class="aspect-video bg-gradient-to-br from-indigo-50 to-purple-100 flex items-center justify-center">
+                  <span class="text-5xl opacity-30">✍️</span>
+                </div>
+              )}
+
+              <!-- Card body -->
+              <div class="p-6 flex flex-col flex-1">
+                <h2 class="text-base font-semibold leading-snug group-hover:text-indigo-600 transition-colors duration-150 flex-1">
+                  {post.title}
+                </h2>
+                <div class="mt-4 flex items-center gap-3 text-xs text-gray-400">
+                  {post.site?.name && <span>{post.site.name}</span>}
+                  {post.site?.name && post.date_created && <span>·</span>}
+                  {post.date_created && <span>{formatDate(post.date_created)}</span>}
+                </div>
+              </div>
+            </article>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <p class="text-gray-400 text-center py-24">記事がまだありません。</p>
+    )}
+  </div>
+</Layout>

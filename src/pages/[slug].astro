@@ -1,4 +1,6 @@
 ---
+import Layout from '../layouts/Layout.astro';
+
 export async function getStaticPaths() {
   const res = await fetch("http://133.117.77.80:8055/items/posts?fields=slug&filter[status][_eq]=published");
   const json = await res.json();
@@ -19,33 +21,184 @@ const fixedBody = post?.body?.replace(
   /http:\/\/133\.117\.77\.80:8055\/assets\//g,
   'https://img.134.network/'
 ) ?? '';
+
+const ogImage = post?.eyecatch?.filename_disk
+  ? `https://img.134.network/${post.eyecatch.filename_disk}`
+  : undefined;
+
+const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://example.com');
+const canonical = `${siteUrl}/${slug}`;
+
+function formatDate(dateStr: string | undefined) {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// JSON-LD structured data
+const jsonLd = post ? {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  url: canonical,
+  ...(ogImage ? { image: ogImage } : {}),
+  ...(post.date_created ? { datePublished: post.date_created } : {}),
+  ...(post.date_updated ? { dateModified: post.date_updated } : {}),
+} : null;
 ---
 
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{post?.title ?? '記事が見つかりません'}</title>
-  </head>
-  <body>
-    {post ? (
-      <>
-        <h1>{post.title}</h1>
+<Layout
+  title={post?.title ?? '記事が見つかりません'}
+  ogImage={ogImage}
+  canonicalUrl={canonical}
+  type="article"
+  publishedAt={post?.date_created}
+>
+  {jsonLd && (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )}
 
-        {post.eyecatch?.filename_disk && (
-          <img
-            src={`https://img.134.network/${post.eyecatch.filename_disk}`}
-            alt={post.title}
-            style="width: 100%; max-width: 600px; height: auto;"
-          />
+  {post ? (
+    <article class="max-w-3xl mx-auto px-6 py-12">
+      <!-- Article header -->
+      <header class="mb-8">
+        {post.site?.name && (
+          <p class="text-sm font-medium text-indigo-600 mb-3">{post.site.name}</p>
         )}
+        <h1 class="text-3xl md:text-4xl font-bold leading-tight">{post.title}</h1>
+        {post.date_created && (
+          <p class="text-sm text-gray-400 mt-4">{formatDate(post.date_created)}</p>
+        )}
+      </header>
 
-        {post.site?.name && <p>{post.site.name}</p>}
+      <!-- Article body -->
+      <div class="prose" set:html={fixedBody} />
 
-        <div set:html={fixedBody} />
-      </>
-    ) : (
-      <p>記事が見つかりません。</p>
-    )}
-  </body>
-</html>
+      <!-- Back link -->
+      <div class="mt-16 pt-8 border-t border-gray-100">
+        <a href="/" class="text-sm text-indigo-600 hover:underline">← 記事一覧に戻る</a>
+      </div>
+    </article>
+  ) : (
+    <div class="max-w-3xl mx-auto px-6 py-24 text-center">
+      <p class="text-xl text-gray-400">記事が見つかりません。</p>
+      <a href="/" class="mt-6 inline-block text-indigo-600 hover:underline text-sm">← 記事一覧に戻る</a>
+    </div>
+  )}
+</Layout>
+
+<style>
+  .prose :global(h1),
+  .prose :global(h2),
+  .prose :global(h3),
+  .prose :global(h4) {
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+  }
+  .prose :global(h1) { font-size: 1.75rem; }
+  .prose :global(h2) { font-size: 1.4rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+  .prose :global(h3) { font-size: 1.2rem; }
+  .prose :global(h4) { font-size: 1rem; }
+
+  .prose :global(p) {
+    line-height: 1.8;
+    margin-bottom: 1.25rem;
+    color: #374151;
+  }
+
+  .prose :global(img) {
+    border-radius: 0.75rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    height: auto;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+
+  .prose :global(a) {
+    color: #4f46e5;
+    text-decoration: underline;
+  }
+  .prose :global(a:hover) {
+    color: #3730a3;
+  }
+
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .prose :global(ul) { list-style-type: disc; }
+  .prose :global(ol) { list-style-type: decimal; }
+  .prose :global(li) {
+    margin-bottom: 0.4rem;
+    color: #374151;
+    line-height: 1.7;
+  }
+
+  .prose :global(blockquote) {
+    border-left: 4px solid #c7d2fe;
+    padding: 0.75rem 1.25rem;
+    margin: 1.5rem 0;
+    background: #f5f5ff;
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .prose :global(code) {
+    background: #f3f4f6;
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.875rem;
+    font-family: ui-monospace, monospace;
+    color: #be185d;
+  }
+
+  .prose :global(pre) {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+  .prose :global(pre code) {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: 0.875rem;
+  }
+
+  .prose :global(hr) {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 2.5rem 0;
+  }
+
+  .prose :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+  .prose :global(th) {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    font-weight: 600;
+  }
+  .prose :global(td) {
+    border: 1px solid #e5e7eb;
+    padding: 0.6rem 1rem;
+  }
+  .prose :global(tr:nth-child(even)) {
+    background: #f9fafb;
+  }
+</style>
