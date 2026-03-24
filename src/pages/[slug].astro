@@ -145,12 +145,12 @@ const jsonLd = post ? {
   /* Header */
   .article-header {
     padding-top: 5.5rem;
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
     position: relative;
   }
 
   .article-header-inner {
-    padding-bottom: 3rem;
+    padding-bottom: 0.5rem;
   }
 
   .article-date {
@@ -393,19 +393,7 @@ const jsonLd = post ? {
     position: relative;
   }
 
-  .post-nav::before {
-    content: '';
-    position: absolute;
-    top: -1px;
-    left: 0;
-    width: 3rem;
-    height: 2px;
-    background: #FFCC22;
-    transform: skewX(-20deg);
-    transform-origin: left center;
-  }
-
-  .post-nav-divider {
+.post-nav-divider {
     width: 1px;
     background: rgba(255, 255, 255, 0.06);
     margin: 3rem 0;
