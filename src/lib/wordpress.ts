@@ -1,4 +1,4 @@
-const WP_API = import.meta.env.WP_API_URL ?? 'https://solocial.net/wp-json/wp/v2';
+const WP_API = import.meta.env.WP_API_URL ?? 'https://www.solocial.net/wp-json/wp/v2';
 
 async function wpFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${WP_API}${path}`);
