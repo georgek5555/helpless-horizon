@@ -88,7 +88,7 @@ const postExcerpt = post ? getExcerpt(post) : '';
 const jsonLd = post ? {
   '@context': 'https://schema.org',
   '@type': 'BlogPosting',
-  headline: post.title,
+  headline: postTitle,
   url: canonical,
   ...(ogImage ? { image: ogImage } : {}),
   ...(post.date ? { datePublished: post.date } : {}),
@@ -125,7 +125,7 @@ const jsonLd = post ? {
         <div class="article-wrap">
           <span class="share-label">SHARE</span>
           <div class="share-buttons">
-            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener" class="share-btn share-btn--x">X / Twitter</a>
+            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(postTitle)}`} target="_blank" rel="noopener" class="share-btn share-btn--x">X / Twitter</a>
             <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--fb">Facebook</a>
             <a href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--line">LINE</a>
           </div>
@@ -144,7 +144,7 @@ const jsonLd = post ? {
         <div class="article-wrap">
           <span class="share-label">この記事をシェア</span>
           <div class="share-buttons">
-            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener" class="share-btn share-btn--x">X / Twitter</a>
+            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(postTitle)}`} target="_blank" rel="noopener" class="share-btn share-btn--x">X / Twitter</a>
             <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--fb">Facebook</a>
             <a href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--line">LINE</a>
           </div>
