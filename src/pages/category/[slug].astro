@@ -25,7 +25,7 @@ try {
   posts = [];
 }
 
-const WP_API = import.meta.env.WP_API_URL ?? 'https://solocial.net/wp-json/wp/v2';
+const WP_API = import.meta.env.WP_API_URL ?? 'https://www.solocial.net/wp-json/wp/v2';
 
 function formatDate(dateStr: string | undefined) {
   if (!dateStr) return '';
@@ -78,7 +78,7 @@ function formatDate(dateStr: string | undefined) {
   const grid = document.getElementById('post-grid') as HTMLElement;
   const sentinel = document.getElementById('load-sentinel') as HTMLElement;
   const status = document.getElementById('load-status') as HTMLElement;
-  const WP_API = grid?.dataset.api ?? 'https://solocial.net/wp-json/wp/v2';
+  const WP_API = grid?.dataset.api ?? 'https://www.solocial.net/wp-json/wp/v2';
   const categoryId = grid?.dataset.category;
 
   let page = 2;
