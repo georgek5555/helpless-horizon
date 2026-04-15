@@ -1,0 +1,217 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCategories, getPostsByCategory, getTitle, getFeaturedImage, getCategory, getPostPath } from '../../lib/wordpress';
+
+export async function getStaticPaths() {
+  let categories: any[] = [];
+  try {
+    categories = await getCategories();
+  } catch {
+    return [];
+  }
+  return categories.map(cat => ({
+    params: { slug: decodeURIComponent(cat.slug) },
+    props: { categoryId: cat.id, categoryName: cat.name, postCount: cat.count },
+  }));
+}
+
+const { slug } = Astro.params;
+const { categoryId, categoryName, postCount } = Astro.props;
+
+let posts: any[] = [];
+try {
+  posts = await getPostsByCategory(categoryId, 20);
+} catch {
+  posts = [];
+}
+
+const WP_API = import.meta.env.WP_API_URL ?? 'https://solocial.net/wp-json/wp/v2';
+
+function formatDate(dateStr: string | undefined) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+}
+---
+
+<Layout title={categoryName} description={`${categoryName}に関する記事一覧`}>
+  <div class="page">
+
+    <div class="cat-header">
+      <div class="wrap">
+        <p class="cat-label">CATEGORY</p>
+        <h1 class="cat-title">{categoryName.toUpperCase()}</h1>
+        <p class="cat-count">{postCount} ARTICLES</p>
+      </div>
+    </div>
+
+    <section class="stream-section">
+      <div class="wrap">
+        <div class="post-grid" id="post-grid" data-api={WP_API} data-category={categoryId}>
+          {posts.map((post, i) => (
+            <a href={`/${getPostPath(post)}`} class="post-card" style={`animation-delay:${i * 0.04}s`}>
+              <div class="post-card-img-wrap">
+                {getFeaturedImage(post) ? (
+                  <img src={getFeaturedImage(post)!} alt={getTitle(post)} loading="lazy" class="post-card-img" />
+                ) : (
+                  <div class="post-card-img-empty"></div>
+                )}
+              </div>
+              <div class="post-card-body">
+                <span class="post-card-kicker">{getCategory(post).toUpperCase()}</span>
+                <h2 class="post-card-title">{getTitle(post)}</h2>
+                <span class="post-card-date">{formatDate(post.date)}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+        <div id="load-sentinel" class="load-sentinel"></div>
+        <div id="load-status" class="load-status" hidden>
+          <span class="load-dots"><span></span><span></span><span></span></span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</Layout>
+
+<script>
+  const grid = document.getElementById('post-grid') as HTMLElement;
+  const sentinel = document.getElementById('load-sentinel') as HTMLElement;
+  const status = document.getElementById('load-status') as HTMLElement;
+  const WP_API = grid?.dataset.api ?? 'https://solocial.net/wp-json/wp/v2';
+  const categoryId = grid?.dataset.category;
+
+  let page = 2;
+  let loading = false;
+  let finished = false;
+
+  function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+  }
+
+  function buildCard(post: any): HTMLElement {
+    const img = post._embedded?.['wp:featuredmedia']?.[0]?.source_url ?? null;
+    const category = post._embedded?.['wp:term']?.[0]?.[0]?.name ?? '';
+    const title = post.title?.rendered ?? '';
+    const date = post.date ? formatDate(post.date) : '';
+
+    let linkPath = post.slug;
+    try { linkPath = new URL(post.link).pathname.replace(/^\/|\/$/g, ''); } catch {}
+    const a = document.createElement('a');
+    a.href = `/${linkPath}`;
+    a.className = 'post-card';
+    a.innerHTML = `
+      <div class="post-card-img-wrap">
+        ${img ? `<img src="${img}" alt="" loading="lazy" class="post-card-img">` : `<div class="post-card-img-empty"></div>`}
+      </div>
+      <div class="post-card-body">
+        <span class="post-card-kicker">${category.toUpperCase()}</span>
+        <h2 class="post-card-title">${title}</h2>
+        <span class="post-card-date">${date}</span>
+      </div>
+    `;
+    return a;
+  }
+
+  async function loadMore() {
+    if (loading || finished || !grid || !categoryId) return;
+    loading = true;
+    status.hidden = false;
+    try {
+      const res = await fetch(
+        `${WP_API}/posts?categories=${categoryId}&per_page=20&page=${page}&orderby=date&order=desc&status=publish&_embed=true`
+      );
+      if (!res.ok) { finished = true; return; }
+      const posts: any[] = await res.json();
+      if (posts.length === 0) { finished = true; return; }
+      posts.forEach(p => grid.appendChild(buildCard(p)));
+      page++;
+      if (posts.length < 20) finished = true;
+    } catch {
+      finished = true;
+    } finally {
+      loading = false;
+      status.hidden = true;
+    }
+  }
+
+  const observer = new IntersectionObserver(
+    entries => { if (entries[0].isIntersecting) loadMore(); },
+    { rootMargin: '300px' }
+  );
+  if (sentinel) observer.observe(sentinel);
+</script>
+
+<style>
+  .page { padding-bottom: 5rem; }
+
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .cat-header {
+    background: var(--color-tile-blue);
+    padding: 2.5rem 0;
+  }
+
+  .cat-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 0.5rem;
+  }
+
+  .cat-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    margin-bottom: 0.75rem;
+  }
+
+  .cat-count {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .stream-section { padding: 2rem 0 0; }
+
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  .load-sentinel { height: 1px; margin-top: 2rem; }
+
+  .load-status {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+  }
+
+  .load-dots { display: flex; gap: 0.4rem; }
+  .load-dots span {
+    width: 6px; height: 6px;
+    background: var(--color-blue);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  .load-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .load-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+  }
+
+  @media (max-width: 900px) { .post-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .post-grid { grid-template-columns: 1fr; } }
+</style>

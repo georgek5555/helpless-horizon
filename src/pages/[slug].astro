@@ -1,47 +1,75 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getPosts, getPost, getTitle, getExcerpt, getContent, getFeaturedImage, getCategory, getPostPath } from '../lib/wordpress';
 
 export async function getStaticPaths() {
-  const res = await fetch("http://133.117.77.80:8055/items/posts?fields=slug,title&filter[status][_eq]=published&sort=-date_created");
-  const json = await res.json();
-  const posts = Array.isArray(json?.data) ? json.data : [];
+  let posts: any[] = [];
+  try {
+    posts = await getPosts(100);
+  } catch (e) {
+    console.error('[getStaticPaths] getPosts failed:', e);
+    return [];
+  }
 
   return posts.map((post, i) => ({
-    params: { slug: post.slug },
+    // URLはWPのpermalinkパス (例: "20151102306") を使用
+    params: { slug: getPostPath(post) },
     props: {
-      prevPost: posts[i - 1] ? { slug: posts[i - 1].slug, title: posts[i - 1].title } : null,
-      nextPost: posts[i + 1] ? { slug: posts[i + 1].slug, title: posts[i + 1].title } : null,
+      wpSlug: post.slug, // API検索用のWPスラグ
+      prevPost: posts[i - 1] ? { slug: getPostPath(posts[i - 1]), title: getTitle(posts[i - 1]) } : null,
+      nextPost: posts[i + 1] ? { slug: getPostPath(posts[i + 1]), title: getTitle(posts[i + 1]) } : null,
+      relatedPosts: posts.filter((_, j) => j !== i).slice(0, 4).map(p => ({
+        slug: getPostPath(p),
+        title: getTitle(p),
+        eyecatch: getFeaturedImage(p),
+      })),
     },
   }));
 }
 
-const { slug, prevPost, nextPost } = { ...Astro.params, ...Astro.props };
+const { slug, wpSlug, prevPost, nextPost, relatedPosts = [] } = { ...Astro.params, ...Astro.props };
 
-const res = await fetch(`http://133.117.77.80:8055/items/posts?fields=*,site.*,eyecatch.filename_disk&filter[slug][_eq]=${slug}&filter[status][_eq]=published`);
-const json = await res.json();
-const post = json?.data?.[0] ?? null;
+let post: any = null;
+try {
+  post = await getPost(wpSlug as string);
+} catch {
+  post = null;
+}
 
-function embedYouTube(html: string): string {
-  // YouTubeのURLを<p>タグ内で検出してiframeに変換
-  return html.replace(
+function fixContent(html: string): string {
+  // 1) Simplicity2テーマのlazyload: data-originalを実srcに置換
+  let out = html.replace(
+    /(<img[^>]+)src="[^"]*1x1\.trans\.gif"([^>]*data-original=")([^"]+)"/g,
+    '$1src="$3"$2$3"'
+  );
+
+  // 2) 外部ブログカード (heartrails サムネ + タイトルリンク + はてなカウンター)
+  //    <p><a href="URL"><img class="alignleft"...></a><a ...>title</a><a ...hatena...></a></p>
+  //    → <a class="ext-blog-card"> カード形式に変換
+  out = out.replace(
+    /<p>\s*(?:<a[^>]*href="([^"]+)"[^>]*>\s*(?:<img[^>]*class="[^"]*alignleft[^"]*"[^>]*src="([^"]+)"[^>]*>)(?:<noscript>[\s\S]*?<\/noscript>)?\s*<\/a>)\s*(?:<a[^>]*href="[^"]*"[^>]*>([\s\S]*?)<\/a>)[\s\S]*?<\/p>/g,
+    (_match: string, href: string, imgSrc: string, titleHtml: string) => {
+      const title = titleHtml.replace(/<[^>]+>/g, '').trim();
+      let domain = href;
+      try { domain = new URL(href).hostname; } catch {}
+      return `<a class="ext-blog-card" href="${href}" target="_blank" rel="noopener noreferrer"><div class="ext-blog-card-img"><img src="${imgSrc}" alt=""></div><div class="ext-blog-card-body"><span class="ext-blog-card-title">${title}</span><span class="ext-blog-card-domain">${domain}</span></div></a>`;
+    }
+  );
+
+  // 3) YouTube URL → iframe embed
+  out = out.replace(
     /<p>\s*(?:<a[^>]*>)?\s*(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_\-]+)[^\s<]*?)\s*(?:<\/a>)?\s*<\/p>/g,
     (_match: string, _url: string, id: string) =>
       `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${id}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
   );
+  return out;
 }
 
-const fixedBody = embedYouTube(
-  post?.body?.replace(
-    /http:\/\/133\.117\.77\.80:8055\/assets\//g,
-    'https://img.134.network/'
-  ) ?? ''
-);
+const fixedBody = post ? fixContent(getContent(post)) : '';
 
-const ogImage = post?.eyecatch?.filename_disk
-  ? `https://img.134.network/${post.eyecatch.filename_disk}`
-  : undefined;
+const ogImage = post ? (getFeaturedImage(post) ?? undefined) : undefined;
 
-const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://www.134.network');
+const siteUrl = import.meta.env.SITE_URL ?? (Astro.site?.toString().replace(/\/$/, '') ?? 'https://solocial.net');
 const canonical = `${siteUrl}/${slug}`;
 
 function formatDate(dateStr: string | undefined) {
@@ -53,23 +81,26 @@ function formatDate(dateStr: string | undefined) {
   });
 }
 
+const categoryName = post ? getCategory(post) : null;
+const postTitle = post ? getTitle(post) : '記事が見つかりません';
+const postExcerpt = post ? getExcerpt(post) : '';
+
 const jsonLd = post ? {
   '@context': 'https://schema.org',
   '@type': 'BlogPosting',
   headline: post.title,
   url: canonical,
   ...(ogImage ? { image: ogImage } : {}),
-  ...(post.date_created ? { datePublished: post.date_created } : {}),
-  ...(post.date_updated ? { dateModified: post.date_updated } : {}),
+  ...(post.date ? { datePublished: post.date } : {}),
 } : null;
 ---
 
 <Layout
-  title={post?.title ?? '記事が見つかりません'}
+  title={postTitle}
   ogImage={ogImage}
   canonicalUrl={canonical}
   type="article"
-  publishedAt={post?.date_created}
+  publishedAt={post?.date}
 >
   {jsonLd && (
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
@@ -80,186 +111,228 @@ const jsonLd = post ? {
 
       <!-- Header -->
       <header class="article-header">
-        <div class="article-header-inner">
-          {post.date_created && (
-            <p class="article-date">{formatDate(post.date_created)}</p>
-          )}
-          <h1 class="article-title">{post.title}</h1>
+        <div class="article-wrap">
+          <div class="article-meta">
+            {categoryName && <span class="article-category">{categoryName.toUpperCase()}</span>}
+            {post.date && <span class="article-date">{formatDate(post.date)}</span>}
+          </div>
+          <h1 class="article-title">{postTitle}</h1>
         </div>
       </header>
 
+      <!-- SNS Share (top) -->
+      <div class="share-bar share-bar--top">
+        <div class="article-wrap">
+          <span class="share-label">SHARE</span>
+          <div class="share-buttons">
+            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener" class="share-btn share-btn--x">X / Twitter</a>
+            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--fb">Facebook</a>
+            <a href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--line">LINE</a>
+          </div>
+        </div>
+      </div>
+
       <!-- Body -->
       <div class="article-body">
-        <div class="prose" set:html={fixedBody} />
+        <div class="article-wrap">
+          <div class="prose" set:html={fixedBody} />
+        </div>
       </div>
+
+      <!-- SNS Share (bottom) -->
+      <div class="share-bar share-bar--bottom">
+        <div class="article-wrap">
+          <span class="share-label">この記事をシェア</span>
+          <div class="share-buttons">
+            <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener" class="share-btn share-btn--x">X / Twitter</a>
+            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--fb">Facebook</a>
+            <a href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(canonical)}`} target="_blank" rel="noopener" class="share-btn share-btn--line">LINE</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related Articles -->
+      {relatedPosts.length > 0 && (
+        <div class="related-section">
+          <div class="article-wrap">
+            <div class="related-header">
+              <span class="related-label">RELATED ARTICLES</span>
+              <div class="related-rule"></div>
+            </div>
+            <div class="related-grid">
+              {relatedPosts.map((rp: any) => (
+                <a href={`/${rp.slug}`} class="related-card">
+                  <div class="related-img-wrap">
+                    {rp.eyecatch ? (
+                      <img src={rp.eyecatch} alt={rp.title} loading="lazy" class="related-img" />
+                    ) : (
+                      <div class="related-img-empty"></div>
+                    )}
+                  </div>
+                  <p class="related-title">{rp.title}</p>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <!-- Navigation -->
       <nav class="post-nav">
-        {prevPost ? (
-          <a href={`/${prevPost.slug}`} class="post-nav-item post-nav-prev">
-            <span class="post-nav-label">
-              <span class="post-nav-arrow">←</span>
-              Prev
-            </span>
-            <span class="post-nav-title">{prevPost.title}</span>
-          </a>
-        ) : (
-          <div class="post-nav-empty" />
-        )}
-        <div class="post-nav-divider" />
-        {nextPost ? (
-          <a href={`/${nextPost.slug}`} class="post-nav-item post-nav-next">
-            <span class="post-nav-label">
-              Next
-              <span class="post-nav-arrow">→</span>
-            </span>
-            <span class="post-nav-title">{nextPost.title}</span>
-          </a>
-        ) : (
-          <div class="post-nav-empty" />
-        )}
+        <div class="article-wrap post-nav-inner">
+          {prevPost ? (
+            <a href={`/${prevPost.slug}`} class="post-nav-item post-nav-prev">
+              <span class="post-nav-label">← PREV</span>
+              <span class="post-nav-title">{prevPost.title}</span>
+            </a>
+          ) : <div />}
+          {nextPost ? (
+            <a href={`/${nextPost.slug}`} class="post-nav-item post-nav-next">
+              <span class="post-nav-label">NEXT →</span>
+              <span class="post-nav-title">{nextPost.title}</span>
+            </a>
+          ) : <div />}
+        </div>
       </nav>
 
     </article>
   ) : (
     <div class="not-found">
-      <p>記事が見つかりません。</p>
-      <a href="/">← Articles</a>
+      <div class="article-wrap">
+        <p>記事が見つかりません。</p>
+        <a href="/">← 一覧へ戻る</a>
+      </div>
     </div>
   )}
 </Layout>
 
 <style>
+  /* ── Layout ── */
   .article {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 0 2rem 8rem;
-    animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    padding-bottom: 6rem;
+    animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
+    from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* Header */
-  .article-header {
-    padding-top: 5.5rem;
-    margin-bottom: 2rem;
-    position: relative;
+  .article-wrap {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
   }
 
-  .article-header-inner {
-    padding-bottom: 0.5rem;
+  /* ── Header ── */
+  .article-header {
+    background: var(--color-tile-blue);
+    padding: 2.5rem 0 2.75rem;
+    margin-bottom: 0;
+  }
+
+  .article-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .article-category {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.12);
+    padding: 0.25rem 0.7rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255,255,255,0.2);
   }
 
   .article-date {
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #FFCC22;
-    opacity: 0.7;
-    margin-bottom: 1.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .article-date::before {
-    content: '';
-    display: inline-block;
-    width: 1.5rem;
-    height: 1px;
-    background: #FFCC22;
-    opacity: 0.5;
-    transform: skewX(-20deg);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.5);
   }
 
   .article-title {
-    font-size: clamp(2rem, 5.5vw, 3.5rem);
-    font-weight: 700;
-    line-height: 1.35;
-    letter-spacing: 0.02em;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 3.75rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     color: #ffffff;
-    position: relative;
-    padding-left: 1.25rem;
+    margin-bottom: 1rem;
   }
 
-  .article-title::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.15em;
-    bottom: 0.15em;
-    width: 3px;
-    background: #FFCC22;
-    transform: skewY(-6deg);
+  .article-deck {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.72);
+    max-width: 560px;
   }
 
-
-  /* Body */
+  /* ── Body ── */
   .article-body {
-    position: relative;
+    padding-top: 2.5rem;
   }
 
   .prose {
     font-size: 1rem;
-    line-height: 1.95;
-    color: #ffffff;
+    line-height: 1.9;
+    color: var(--color-text);
   }
 
-  .prose :global(h1),
-  .prose :global(h2),
-  .prose :global(h3),
-  .prose :global(h4) {
-    font-weight: 700;
-    line-height: 1.5;
-    letter-spacing: 0.03em;
-    color: #ffffff;
+  .prose :global(h2) {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.0;
+    color: var(--color-text);
     margin-top: 3rem;
     margin-bottom: 1rem;
+    border-left: 4px solid var(--color-blue);
+    padding-left: 0.85rem;
   }
-  .prose :global(h2) {
-    font-size: 1.3rem;
-    position: relative;
-    padding-left: 1rem;
-  }
-  .prose :global(h2)::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.2em;
-    bottom: 0.2em;
-    width: 2px;
-    background: #FFCC22;
-    transform: skewY(-8deg);
-  }
+
   .prose :global(h3) {
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-blue);
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
   }
-  .prose :global(h3)::before {
-    content: '/';
-    color: #FFCC22;
+
+  .prose :global(h4) {
+    font-size: 0.85rem;
     font-weight: 700;
-    font-style: italic;
-    font-size: 1.15em;
-    flex-shrink: 0;
-    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
   }
-  .prose :global(h4) { font-size: 1rem; color: rgba(255,255,255,0.7); }
 
   .prose :global(p) {
-    margin-bottom: 1.75rem;
-    color: #ffffff;
+    margin-bottom: 1.6rem;
   }
 
   .prose :global(img) {
     width: 100%;
     height: auto;
-    margin: 2.5rem 0;
+    margin: 2rem 0;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
     display: block;
   }
 
@@ -268,105 +341,267 @@ const jsonLd = post ? {
     padding-bottom: 56.25%;
     height: 0;
     overflow: hidden;
-    margin: 2.5rem 0;
-    background: #111;
+    margin: 2rem 0;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-lg);
   }
   .prose :global(.video-wrap iframe) {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
   }
 
   .prose :global(a) {
-    color: #FFCC22;
+    color: var(--color-blue);
     text-decoration: underline;
     text-underline-offset: 3px;
+    text-decoration-color: var(--color-blue-mid);
   }
-  .prose :global(a:hover) { opacity: 0.75; }
+  .prose :global(a:hover) {
+    text-decoration-color: var(--color-blue);
+  }
 
-  .prose :global(ul),
-  .prose :global(ol) {
+  .prose :global(ul), .prose :global(ol) {
     padding-left: 0;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.6rem;
     list-style: none;
   }
   .prose :global(ul li) {
     position: relative;
     padding-left: 1.2rem;
-    margin-bottom: 0.4rem;
-    color: #ffffff;
-    line-height: 1.75;
+    margin-bottom: 0.45rem;
+    line-height: 1.8;
   }
   .prose :global(ul li)::before {
-    content: '—';
+    content: '';
     position: absolute;
-    left: 0;
-    color: rgba(255, 204, 34, 0.6);
-    font-size: 0.8em;
-    top: 0.18em;
+    left: 0; top: 0.65em;
+    width: 5px; height: 5px;
+    background: var(--color-blue);
+    border-radius: 50%;
   }
-  .prose :global(ol) {
-    counter-reset: ol-counter;
-  }
+  .prose :global(ol) { counter-reset: ol-counter; }
   .prose :global(ol li) {
     position: relative;
-    padding-left: 1.6rem;
-    margin-bottom: 0.4rem;
-    color: #ffffff;
+    padding-left: 2rem;
+    margin-bottom: 0.45rem;
     counter-increment: ol-counter;
-    line-height: 1.75;
+    line-height: 1.8;
   }
   .prose :global(ol li)::before {
     content: counter(ol-counter);
     position: absolute;
-    left: 0;
-    color: #FFCC22;
-    font-size: 0.9rem;
+    left: 0; top: 0.1em;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
     font-weight: 700;
-    font-variant-numeric: lining-nums tabular-nums;
-    font-family: 'Cormorant Garamond', serif;
-    top: 0.1em;
+    color: var(--color-blue);
+    background: var(--color-blue-light);
+    width: 1.4rem; height: 1.4rem;
+    display: flex;
+    align-items: center; justify-content: center;
+    border-radius: var(--radius-xs);
   }
 
   .prose :global(blockquote) {
-    border-left: 3px solid #FFCC22;
-    padding: 0.75rem 1.5rem;
-    margin: 2.5rem 0;
-    color: rgba(255, 255, 255, 0.55);
+    border-left: 3px solid var(--color-blue);
+    background: var(--color-blue-light);
+    padding: 1rem 1.5rem;
+    margin: 2rem 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    color: var(--color-text-secondary);
     font-style: italic;
-    transform: skewX(-1deg);
   }
 
   .prose :global(code) {
-    background: rgba(255, 204, 34, 0.08);
-    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--color-blue);
+    background: var(--color-blue-light);
+    border: 1px solid var(--color-blue-mid);
+    border-radius: var(--radius-xs);
     padding: 0.1em 0.4em;
-    font-size: 0.875em;
-    font-family: ui-monospace, monospace;
-    color: #FFCC22;
   }
 
   .prose :global(pre) {
-    background: #0f0f0f;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: #0f1117;
+    border-radius: var(--radius-lg);
     padding: 1.5rem;
     overflow-x: auto;
     margin: 2rem 0;
   }
   .prose :global(pre code) {
     background: transparent;
-    padding: 0;
-    color: #ffffff;
+    border: none; padding: 0;
+    color: #e2e8f0;
     font-size: 0.875rem;
   }
 
   .prose :global(hr) {
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid var(--color-border);
     margin: 3rem 0;
-    transform: skewX(-2deg);
+  }
+
+  /* ── External blog card (heartrails pattern) ── */
+  .prose :global(.ext-blog-card) {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    text-decoration: none !important;
+    margin: 1.5rem 0;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+
+  .prose :global(.ext-blog-card:hover) {
+    box-shadow: 0 0 0 2px var(--color-blue);
+  }
+
+  .prose :global(.ext-blog-card-img) {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    background: var(--color-surface-2);
+    overflow: hidden;
+  }
+
+  .prose :global(.ext-blog-card-img img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: block;
+  }
+
+  .prose :global(.ext-blog-card-body) {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .prose :global(.ext-blog-card-title) {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .prose :global(.ext-blog-card:hover .ext-blog-card-title) {
+    color: var(--color-blue);
+  }
+
+  .prose :global(.ext-blog-card-domain) {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-blue);
+  }
+
+  /* ── Blog card (WordPress internal link card) ── */
+  .prose :global(.hover-blog-card) {
+    display: block;
+    text-decoration: none !important;
+    margin: 2rem 0;
+  }
+
+  .prose :global(.blog-card) {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+
+  .prose :global(.hover-blog-card:hover .blog-card) {
+    box-shadow: 0 0 0 2px var(--color-blue);
+  }
+
+  .prose :global(.blog-card-thumbnail) {
+    flex-shrink: 0;
+    width: 120px;
+    background: var(--color-surface-2);
+    overflow: hidden;
+  }
+
+  .prose :global(.blog-card-thumbnail img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: block;
+  }
+
+  .prose :global(.blog-card-content) {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    min-width: 0;
+  }
+
+  .prose :global(.blog-card-title) {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    margin-bottom: 0.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .prose :global(.hover-blog-card:hover .blog-card-title) {
+    color: var(--color-blue);
+  }
+
+  .prose :global(.blog-card-excerpt) {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+
+  .prose :global(.blog-card-footer) {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    flex-shrink: 0;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .prose :global(.blog-card-site),
+  .prose :global(.blog-card-date) {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .prose :global(.blog-card-site) {
+    color: var(--color-blue);
   }
 
   .prose :global(table) {
@@ -376,151 +611,276 @@ const jsonLd = post ? {
     font-size: 0.9rem;
   }
   .prose :global(th) {
-    background: rgba(255, 204, 34, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-blue-light);
+    border: 1px solid var(--color-border);
     padding: 0.6rem 1rem;
     text-align: left;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-blue-dark);
   }
   .prose :global(td) {
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border);
     padding: 0.6rem 1rem;
   }
 
-  /* Post Navigation */
-  .post-nav {
-    margin-top: 6rem;
+  /* ── SNS Share ── */
+  .share-bar {
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .share-bar--top {
+    margin-bottom: 2.5rem;
+  }
+
+  .share-bar--bottom {
+    margin-top: 3rem;
+    margin-bottom: 0;
+  }
+
+  .share-bar .article-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .share-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .share-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .share-btn {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    display: inline-block;
+  }
+
+  .share-btn--x {
+    color: #0f1117;
+    border-color: #0f1117;
+  }
+  .share-btn--x:hover {
+    background: #0f1117;
+    color: #fff;
+  }
+
+  .share-btn--fb {
+    color: #1877f2;
+    border-color: #1877f2;
+  }
+  .share-btn--fb:hover {
+    background: #1877f2;
+    color: #fff;
+  }
+
+  .share-btn--line {
+    color: #06c755;
+    border-color: #06c755;
+  }
+  .share-btn--line:hover {
+    background: #06c755;
+    color: #fff;
+  }
+
+  /* ── Related Articles ── */
+  .related-section {
+    padding: 3rem 0;
+    border-top: 1px solid var(--color-border);
+    margin-top: 3rem;
+  }
+
+  .related-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .related-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .related-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+  }
+
+  .related-grid {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    position: relative;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    border: 1px solid var(--color-border);
   }
 
-.post-nav-divider {
-    width: 1px;
-    background: rgba(255, 255, 255, 0.06);
-    margin: 3rem 0;
-    position: relative;
+  .related-card {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    background: var(--color-bg);
+    transition: background 0.15s;
+    border-right: 1px solid var(--color-border);
   }
 
-  .post-nav-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -1px;
-    width: 3px;
-    height: 1.5rem;
-    background: #FFCC22;
-    transform: translateY(-50%) skewY(-15deg);
-    opacity: 0.4;
+  .related-card:last-child {
+    border-right: none;
   }
 
-  .post-nav-empty {
-    display: block;
+  .related-card:hover {
+    background: var(--color-surface);
+  }
+
+  .related-img-wrap {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--color-surface-2);
+  }
+
+  .related-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .related-card:hover .related-img {
+    transform: scale(1.04);
+  }
+
+  .related-img-empty {
+    width: 100%;
+    height: 100%;
+    background: var(--color-tile-surface);
+  }
+
+  .related-title {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: var(--color-text);
+    padding: 0.75rem;
+    transition: color 0.15s;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .related-card:hover .related-title {
+    color: var(--color-blue);
+  }
+
+  @media (max-width: 640px) {
+    .related-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .related-card {
+      border-right: 1px solid var(--color-border);
+    }
+    .related-card:nth-child(2n) {
+      border-right: none;
+    }
+  }
+
+  /* ── Post Nav ── */
+  .post-nav {
+    margin-top: 4rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 2rem;
+  }
+
+  .post-nav-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
   }
 
   .post-nav-item {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
-    padding: 3rem 0;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
     text-decoration: none;
-    transition: opacity 0.2s;
+    background: var(--color-bg);
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
-  .post-nav-prev {
-    padding-right: 2.5rem;
+  .post-nav-item:hover {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 1px var(--color-blue);
   }
 
-  .post-nav-next {
-    padding-left: 2.5rem;
-    align-items: flex-end;
-    text-align: right;
-  }
+  .post-nav-next { align-items: flex-end; text-align: right; }
 
   .post-nav-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    font-family: var(--font-mono);
     font-size: 0.6rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: #FFCC22;
-    opacity: 0.55;
-    transition: opacity 0.25s;
-  }
-
-  .post-nav-next .post-nav-label {
-    justify-content: flex-end;
-  }
-
-  .post-nav-arrow {
-    display: inline-block;
-    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .post-nav-prev:hover .post-nav-arrow {
-    transform: translateX(-6px);
-  }
-
-  .post-nav-next:hover .post-nav-arrow {
-    transform: translateX(6px);
-  }
-
-  .post-nav-item:hover .post-nav-label {
-    opacity: 1;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--color-blue);
   }
 
   .post-nav-title {
-    font-size: clamp(0.95rem, 2vw, 1.15rem);
-    font-weight: 500;
-    line-height: 1.55;
-    color: #ffffff;
-    transition: color 0.25s;
-    position: relative;
-    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 1.1;
+    color: var(--color-text);
+    transition: color 0.15s;
   }
 
-  .post-nav-title::after {
-    content: '';
-    position: absolute;
-    bottom: -3px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: #FFCC22;
-    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  }
+  .post-nav-item:hover .post-nav-title { color: var(--color-blue); }
 
-  .post-nav-next .post-nav-title::after {
-    left: auto;
-    right: 0;
-  }
-
-  .post-nav-item:hover .post-nav-title::after {
-    width: 100%;
-  }
-
-  .post-nav-item:hover .post-nav-title {
-    color: rgba(255, 255, 255, 0.75);
-  }
-
-  /* Not found */
+  /* ── Not Found ── */
   .not-found {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 8rem 2rem;
+    padding: 6rem 0;
     text-align: center;
   }
   .not-found p {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--color-text-muted);
     margin-bottom: 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
   }
   .not-found a {
+    font-family: var(--font-mono);
     font-size: 0.75rem;
-    letter-spacing: 0.12em;
-    color: rgba(255, 255, 255, 0.3);
-    text-decoration: none;
-    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-blue);
   }
-  .not-found a:hover { color: #FFCC22; }
 </style>
